@@ -1,8 +1,19 @@
 import threading
 import time
+import sys
 from typing import Optional
 
 from pynput import keyboard, mouse
+
+if sys.platform == 'win32':
+    import ctypes
+    def get_timestamp():
+        # GetMessageTime returns the timestamp (in ms) for the last message 
+        # retrieved from the current thread's message queue.
+        return float(ctypes.windll.user32.GetMessageTime())
+else:
+    def get_timestamp():
+        return time.perf_counter() * 1000.0
 
 from classifier import MovementClassifier, ShotClassification
 
@@ -78,7 +89,7 @@ class InputListener:
         if char_key == "-":
             self.overlay.decrease_size()
             return
-        timestamp = time.time() * 1000.0
+        timestamp = get_timestamp()
         char: Optional[str] = None
         try:
             char = key.char
@@ -91,7 +102,7 @@ class InputListener:
                     self.classifier.on_press(upper_char, timestamp)
 
     def _on_key_release(self, key: keyboard.Key) -> None:
-        timestamp = time.time() * 1000.0
+        timestamp = get_timestamp()
         char: Optional[str] = None
         try:
             char = key.char
@@ -106,7 +117,7 @@ class InputListener:
     def _on_click(self, x: int, y: int, button: mouse.Button, pressed: bool) -> None:
         if button != mouse.Button.left:
             return
-        current_time = time.time() * 1000.0
+        current_time = get_timestamp()
         if pressed:
             with self._lock:
                 base_result = self.classifier.classify_shot(current_time)
